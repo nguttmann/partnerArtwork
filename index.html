@@ -1,24 +1,168 @@
-html
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Form Input Example</title>
+    <title>Artwork Download</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+        input {
+            display: block;
+            margin-bottom: 10px;
+        }
+        .preview {
+            margin-top: 20px;
+        }
+        .preview img {
+            width: 100px;
+            display: block;
+            margin-bottom: 10px;
+        }
+        .preview .download-button {
+            display: block;
+            padding: 10px 15px;
+            margin-bottom: 20px;
+            background-color: #007bff;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            transition: background-color 0.3s ease;
+        }
+        .preview .download-button:hover {
+            background-color: #0056b3;
+        }
+        .download-all-button {
+            display: block;
+            padding: 10px 15px;
+            margin-top: 20px;
+            background-color: #28a745;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            text-align: center;
+            transition: background-color 0.3s ease;
+        }
+        .download-all-button:hover {
+            background-color: #218838;
+        }
+    </style>
 </head>
 <body>
-    <h1>Input Form</h1>
-    <form>
+    <h1>Artwork Download</h1>
+    <form id="artworkForm">
         <label for="id">ID:</label>
-        <input type="text" id="id" name="id" required><br><br>
-
-        <label for="width">Width (cm):</label>
-        <input type="number" id="width" name="width" required><br><br>
-
-        <label for="height">Height (cm):</label>
-        <input type="number" id="height" name="height" required><br><br>
-
-        <input type="submit" value="Submit">
+        <input type="text" id="id" name="id" required>
+        
+        <label for="width">Width (in px):</label>
+        <input type="number" id="width" name="width" required>
+        
+        <label for="height">Height (in px):</label>
+        <input type="number" id="height" name="height" required>
+        
+        <button type="submit">Get Artwork</button>
     </form>
+    
+    <div class="preview" id="preview"></div>
+    <button id="downloadAllButton" class="download-all-button" style="display:none;">Download All Images as ZIP</button>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
+    <script>
+        document.getElementById('artworkForm').addEventListener('submit', async function(event) {
+            event.preventDefault();
+            
+            const id = document.getElementById('id').value;
+            const width = document.getElementById('width').value;
+            const height = document.getElementById('height').value;
+            
+            const apiKey = 'NuCtpyyx9WvTbZDI2lHygtZggxnX77Fg'; // Replace with your actual API key
+            const url = `https://api.redbull.com/v1/graphql/rrn:gql-queries:364d79e7-b899-5610-99f7-644f4038ccca?id=${encodeURIComponent(id)}&imageWidth=${width}&imageHeight=${height}`;
+            
+            try {
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'API-Key': apiKey
+                    }
+                });
+                
+                const data = await response.json();
+                const resource = data.data.resource;
+
+                const images = [];
+
+                // Add images from the first payload structure if they exist
+                if (resource.aspect9x16) {
+                    images.push({ src: resource.aspect9x16, name: 'Aspect 9x16' });
+                }
+                if (resource.aspect16x9) {
+                    images.push({ src: resource.aspect16x9, name: 'Aspect 16x9' });
+                }
+                if (resource.aspect2x3) {
+                    images.push({ src: resource.aspect2x3, name: 'Aspect 2x3' });
+                }
+                if (resource.headerMedia && resource.headerMedia.imageSrc) {
+                    images.push({ src: resource.headerMedia.imageSrc, name: 'Header Media' });
+                }
+
+                // Add images from the second payload structure
+                if (resource.featuredMedia) {
+                    resource.featuredMedia.forEach((media, index) => {
+                        if (media.imageSrc) {
+                            images.push({ src: media.imageSrc, name: `Featured Media ${index + 1}` });
+                        }
+                    });
+                }
+
+                const previewDiv = document.getElementById('preview');
+                previewDiv.innerHTML = ''; // Clear previous images
+                
+                images.forEach(image => {
+                    const imgElement = document.createElement('img');
+                    imgElement.src = image.src;
+                    previewDiv.appendChild(imgElement);
+                    
+                    const linkElement = document.createElement('a');
+                    linkElement.href = image.src;
+                    linkElement.download = `${image.name}.jpg`;
+                    linkElement.innerText = `Download ${image.name}`;
+                    linkElement.classList.add('download-button');
+                    previewDiv.appendChild(linkElement);
+                });
+
+                // Show the "Download All" button if there are images
+                const downloadAllButton = document.getElementById('downloadAllButton');
+                if (images.length > 0) {
+                    downloadAllButton.style.display = 'block';
+                    downloadAllButton.onclick = () => downloadAllImagesAsZip(images);
+                } else {
+                    downloadAllButton.style.display = 'none';
+                }
+
+            } catch (error) {
+                console.error('Error fetching artwork:', error);
+            }
+        });
+
+        async function downloadAllImagesAsZip(images) {
+            const zip = new JSZip();
+            const imgFolder = zip.folder("images");
+
+            for (const image of images) {
+                const response = await fetch(image.src);
+                const blob = await response.blob();
+                imgFolder.file(`${image.name}.jpg`, blob);
+            }
+
+            zip.generateAsync({ type: "blob" }).then(content => {
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(content);
+                link.download = "images.zip";
+                link.click();
+            });
+        }
+    </script>
 </body>
 </html>
