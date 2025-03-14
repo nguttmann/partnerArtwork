@@ -6,20 +6,75 @@
     <title>Artwork Download</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
+            font-family: 'Roboto', sans-serif;
+            color: #333;
+            background-color: #f4f4f9;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .container {
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
             padding: 20px;
+            max-width: 600px;
+            width: 100%;
+        }
+        h1 {
+            text-align: center;
+            color: #007bff;
+        }
+        form {
+            display: flex;
+            flex-direction: column;
+        }
+        label {
+            margin-top: 10px;
+            font-weight: bold;
         }
         input {
-            display: block;
-            margin-bottom: 10px;
+            padding: 10px;
+            margin-top: 5px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        button {
+            padding: 10px 15px;
+            margin-top: 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .info-text {
+            margin-top: 20px;
+            font-size: 0.9em;
+            color: #666;
         }
         .preview {
             margin-top: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
         .preview img {
             width: 100px;
-            display: block;
             margin-bottom: 10px;
+            border-radius: 8px;
+        }
+        .preview .logo {
+            background-color: #333;
+            padding: 10px;
+            border: 2px solid #ccc;
         }
         .preview .download-button {
             display: block;
@@ -30,6 +85,8 @@
             text-decoration: none;
             border-radius: 5px;
             transition: background-color 0.3s ease;
+            width: 200px;
+            text-align: center;
         }
         .preview .download-button:hover {
             background-color: #0056b3;
@@ -44,30 +101,37 @@
             border-radius: 5px;
             text-align: center;
             transition: background-color 0.3s ease;
+            width: 200px;
+            align-self: center;
         }
         .download-all-button:hover {
             background-color: #218838;
         }
     </style>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
 </head>
 <body>
-    <h1>Artwork Download</h1>
-    <form id="artworkForm">
-        <label for="id">ID:</label>
-        <input type="text" id="id" name="id" required>
+    <div class="container">
+        <h1>Artwork Download</h1>
+        <form id="artworkForm">
+            <label for="id">ID:</label>
+            <input type="text" id="id" name="id" required>
+            
+            <label for="width">Width (in px):</label>
+            <input type="number" id="width" name="width" required>
+            
+            <label for="height">Height (in px):</label>
+            <input type="number" id="height" name="height" required>
+            
+            <button type="submit">Get Artwork</button>
+        </form>
         
-        <label for="width">Width (in px):</label>
-        <input type="number" id="width" name="width" required>
+        <p class="info-text">Auto Artwork is only available if there’s a logo attached in EA. These Artworks are currently limited to preconfigured Templates. If more are required, the DPS team can assist.</p>
         
-        <label for="height">Height (in px):</label>
-        <input type="number" id="height" name="height" required>
-        
-        <button type="submit">Get Artwork</button>
-    </form>
+        <div class="preview" id="preview"></div>
+        <button id="downloadAllButton" class="download-all-button" style="display:none;">Download All Images as ZIP</button>
+    </div>
     
-    <div class="preview" id="preview"></div>
-    <button id="downloadAllButton" class="download-all-button" style="display:none;">Download All Images as ZIP</button>
-
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
     <script>
         document.getElementById('artworkForm').addEventListener('submit', async function(event) {
@@ -78,7 +142,7 @@
             const height = document.getElementById('height').value;
             
             const apiKey = 'NuCtpyyx9WvTbZDI2lHygtZggxnX77Fg'; // Replace with your actual API key
-            const url = `https://api.redbull.com/v1/graphql/rrn:gql-queries:364d79e7-b899-5610-99f7-644f4038ccca?id=${encodeURIComponent(id)}&imageWidth=${width}&imageHeight=${height}`;
+            const url = `https://api.redbull.com/v1/graphql/rrn:gql-queries:c042e604-6177-5500-9ff4-71f10851876f?id=${encodeURIComponent(id)}&imageWidth=${width}&imageHeight=${height}`;
             
             try {
                 const response = await fetch(url, {
@@ -93,21 +157,27 @@
 
                 const images = [];
 
-                // Add images from the first payload structure if they exist
+                // Add images from the payload structure if they exist
+                if (resource.logo && resource.logo.length > 0) {
+                    resource.logo.forEach((logo, index) => {
+                        if (logo.imageEssence && logo.imageEssence.imageURL) {
+                            const cleanedUrl = logo.imageEssence.imageURL.replace("{op}/", "");
+                            images.push({ src: cleanedUrl, name: `Logo ${index + 1}`, isLogo: true });
+                        }
+                    });
+                }
                 if (resource.aspect9x16) {
-                    images.push({ src: resource.aspect9x16, name: 'Aspect 9x16' });
+                    images.push({ src: resource.aspect9x16, name: 'Auto Artwork 9x16' });
                 }
                 if (resource.aspect16x9) {
-                    images.push({ src: resource.aspect16x9, name: 'Aspect 16x9' });
+                    images.push({ src: resource.aspect16x9, name: 'Auto Artwork 16x9' });
                 }
                 if (resource.aspect2x3) {
-                    images.push({ src: resource.aspect2x3, name: 'Aspect 2x3' });
+                    images.push({ src: resource.aspect2x3, name: 'Auto Artwork 2x3' });
                 }
                 if (resource.headerMedia && resource.headerMedia.imageSrc) {
                     images.push({ src: resource.headerMedia.imageSrc, name: 'Header Media' });
                 }
-
-                // Add images from the second payload structure
                 if (resource.featuredMedia) {
                     resource.featuredMedia.forEach((media, index) => {
                         if (media.imageSrc) {
@@ -122,6 +192,9 @@
                 images.forEach(image => {
                     const imgElement = document.createElement('img');
                     imgElement.src = image.src;
+                    if (image.isLogo) {
+                        imgElement.classList.add('logo');
+                    }
                     previewDiv.appendChild(imgElement);
                     
                     const linkElement = document.createElement('a');
