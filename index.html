@@ -3,237 +3,167 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Artwork Download</title>
+    <title>Artwork Download App</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <style>
         body {
-            font-family: 'Roboto', sans-serif;
-            color: #333;
-            background-color: #f4f4f9;
-            margin: 0;
-            padding: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
+            font-family: 'Arial', sans-serif;
+            text-align: center;
+            background-color: #f4f4f4;
+            padding: 20px;
         }
         .container {
-            background: #fff;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            max-width: 800px;
+            margin: auto;
+            background: white;
             padding: 20px;
-            max-width: 600px;
-            width: 100%;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
         }
-        h1 {
-            text-align: center;
-            color: #007bff;
-        }
-        form {
-            display: flex;
-            flex-direction: column;
-        }
-        label {
-            margin-top: 10px;
-            font-weight: bold;
-        }
-        input {
-            padding: 10px;
-            margin-top: 5px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-        }
-        button {
-            padding: 10px 15px;
-            margin-top: 20px;
-            background-color: #007bff;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: background-color 0.3s ease;
-        }
-        button:hover {
-            background-color: #0056b3;
-        }
-        .info-text {
-            margin-top: 20px;
-            font-size: 0.9em;
-            color: #666;
-        }
-        .preview {
-            margin-top: 20px;
+        .form-container {
             display: flex;
             flex-direction: column;
             align-items: center;
-        }
-        .preview img {
-            width: 100px;
-            margin-bottom: 10px;
-            border-radius: 8px;
-        }
-        .preview .logo {
-            background-color: #333;
-            padding: 10px;
-            border: 2px solid #ccc;
-        }
-        .preview .download-button {
-            display: block;
-            padding: 10px 15px;
             margin-bottom: 20px;
-            background-color: #007bff;
-            color: white;
-            text-decoration: none;
+        }
+        input, button {
+            padding: 10px;
+            margin: 5px;
             border-radius: 5px;
-            transition: background-color 0.3s ease;
-            width: 200px;
-            text-align: center;
+            border: 1px solid #ccc;
+            font-size: 16px;
         }
-        .preview .download-button:hover {
-            background-color: #0056b3;
-        }
-        .download-all-button {
-            display: block;
-            padding: 10px 15px;
-            margin-top: 20px;
-            background-color: #28a745;
+        button {
+            cursor: pointer;
+            background: #007bff;
             color: white;
-            text-decoration: none;
-            border-radius: 5px;
-            text-align: center;
-            transition: background-color 0.3s ease;
-            width: 200px;
-            align-self: center;
+            border: none;
+            transition: 0.3s;
         }
-        .download-all-button:hover {
-            background-color: #218838;
+        button:hover {
+            background: #0056b3;
+        }
+        .gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            justify-items: center;
+        }
+        .artwork {
+            background: white;
+            padding: 10px;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        .artwork img {
+            width: 100%;
+            border-radius: 5px;
         }
     </style>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
 </head>
 <body>
     <div class="container">
-        <h1>Artwork Download</h1>
-        <form id="artworkForm">
-            <label for="id">ID:</label>
-            <input type="text" id="id" name="id" required>
-            
-            <label for="width">Width (in px):</label>
-            <input type="number" id="width" name="width" required>
-            
-            <label for="height">Height (in px):</label>
-            <input type="number" id="height" name="height" required>
-            
-            <button type="submit">Get Artwork</button>
-        </form>
-        
-        <p class="info-text">Auto Artwork is only available if there’s a logo attached in EA. These Artworks are currently limited to preconfigured Templates. If more are required, the DPS team can assist.</p>
-        
-        <div class="preview" id="preview"></div>
-        <button id="downloadAllButton" class="download-all-button" style="display:none;">Download All Images as ZIP</button>
+        <h1>Artwork Download App</h1>
+        <div class="form-container">
+            <input type="text" id="contentId" placeholder="Enter Content ID" style="width: 90%; max-width: 400px;">
+            <input type="number" id="imageWidth" placeholder="Width (default 1000)" style="width: 90%; max-width: 400px;">
+            <input type="number" id="imageHeight" placeholder="Height (default 500)" style="width: 90%; max-width: 400px;">
+            <button onclick="fetchArtworks()">Load Artworks</button>
+        </div>
+        <button onclick="downloadAllAsZip()" style="width: 90%; max-width: 400px;">Download All</button>
+        <div class="gallery" id="gallery"></div>
     </div>
-    
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
+
     <script>
-        document.getElementById('artworkForm').addEventListener('submit', async function(event) {
-            event.preventDefault();
+        async function fetchArtworks() {
+            const apiKey = 'NuCtpyyx9WvTbZDI2lHygtZggxnX77Fg';
+            const contentId = document.getElementById('contentId').value;
+            const width = document.getElementById('imageWidth').value || 1000;
+            const height = document.getElementById('imageHeight').value || 500;
             
-            const id = document.getElementById('id').value;
-            const width = document.getElementById('width').value;
-            const height = document.getElementById('height').value;
-            
-            const apiKey = 'NuCtpyyx9WvTbZDI2lHygtZggxnX77Fg'; // Replace with your actual API key
-            const url = `https://api.redbull.com/v1/graphql/rrn:gql-queries:c042e604-6177-5500-9ff4-71f10851876f?id=${encodeURIComponent(id)}&imageWidth=${width}&imageHeight=${height}`;
-            
-            try {
-                const response = await fetch(url, {
-                    method: 'GET',
-                    headers: {
-                        'API-Key': apiKey
-                    }
-                });
-                
-                const data = await response.json();
-                const resource = data.data.resource;
-
-                const images = [];
-
-                // Add images from the payload structure if they exist
-                if (resource.logo && resource.logo.length > 0) {
-                    resource.logo.forEach((logo, index) => {
-                        if (logo.imageEssence && logo.imageEssence.imageURL) {
-                            const cleanedUrl = logo.imageEssence.imageURL.replace("{op}/", "");
-                            images.push({ src: cleanedUrl, name: `Logo ${index + 1}`, isLogo: true });
-                        }
-                    });
-                }
-                if (resource.aspect9x16) {
-                    images.push({ src: resource.aspect9x16, name: 'Auto Artwork 9x16' });
-                }
-                if (resource.aspect16x9) {
-                    images.push({ src: resource.aspect16x9, name: 'Auto Artwork 16x9' });
-                }
-                if (resource.aspect2x3) {
-                    images.push({ src: resource.aspect2x3, name: 'Auto Artwork 2x3' });
-                }
-                if (resource.headerMedia && resource.headerMedia.imageSrc) {
-                    images.push({ src: resource.headerMedia.imageSrc, name: 'Header Media' });
-                }
-                if (resource.featuredMedia) {
-                    resource.featuredMedia.forEach((media, index) => {
-                        if (media.imageSrc) {
-                            images.push({ src: media.imageSrc, name: `Featured Media ${index + 1}` });
-                        }
-                    });
-                }
-
-                const previewDiv = document.getElementById('preview');
-                previewDiv.innerHTML = ''; // Clear previous images
-                
-                images.forEach(image => {
-                    const imgElement = document.createElement('img');
-                    imgElement.src = image.src;
-                    if (image.isLogo) {
-                        imgElement.classList.add('logo');
-                    }
-                    previewDiv.appendChild(imgElement);
-                    
-                    const linkElement = document.createElement('a');
-                    linkElement.href = image.src;
-                    linkElement.download = `${image.name}.jpg`;
-                    linkElement.innerText = `Download ${image.name}`;
-                    linkElement.classList.add('download-button');
-                    previewDiv.appendChild(linkElement);
-                });
-
-                // Show the "Download All" button if there are images
-                const downloadAllButton = document.getElementById('downloadAllButton');
-                if (images.length > 0) {
-                    downloadAllButton.style.display = 'block';
-                    downloadAllButton.onclick = () => downloadAllImagesAsZip(images);
-                } else {
-                    downloadAllButton.style.display = 'none';
-                }
-
-            } catch (error) {
-                console.error('Error fetching artwork:', error);
+            if (!contentId) {
+                alert('Please enter a Content ID');
+                return;
             }
-        });
+            
+            const apiUrl = `https://api.redbull.com/v1/graphql/rrn:gql-queries:c042e604-6177-5500-9ff4-71f10851876f?id=${contentId}&imageWidth=${width}&imageHeight=${height}`;
+            
+            const response = await fetch(apiUrl, {
+                method: 'GET',
+                headers: { 'API-Key': apiKey }
+            });
+            
+            const data = await response.json();
+            const gallery = document.getElementById('gallery');
+            gallery.innerHTML = '';
+            
+            const resource = data.data?.resource;
+            if (!resource) {
+                alert('No images found for this content ID');
+                return;
+            }
+            
+            const images = [
+                ...resource.logo?.map(img => img.imageEssence.imageURL.replace('{op}/', '')) || [],
+                resource.aspect9x16,
+                resource.aspect16x9,
+                resource.aspect2x3,
+                resource.headerMedia?.imageSrc,
+                ...resource.featuredMedia?.map(img => img.imageSrc) || []
+            ].filter(Boolean);
+            
+            images.forEach((imgUrl, index) => {
+                let description = 'Artwork';
+                if (index < (resource.logo?.length || 0)) {
+                    description = 'Logo';
+                } else if (imgUrl === resource.aspect9x16) {
+                    description = 'Artwork (9x16)';
+                } else if (imgUrl === resource.aspect16x9) {
+                    description = 'Artwork (16x9)';
+                } else if (imgUrl === resource.aspect2x3) {
+                    description = 'Artwork (2x3)';
+                } else if (imgUrl === resource.headerMedia?.imageSrc) {
+                    description = 'Header Media';
+                } else if (resource.featuredMedia?.some(img => img.imageSrc === imgUrl)) {
+                    description = 'Featured Media';
+                }
+                
+                const div = document.createElement('div');
+                div.classList.add('artwork');
+                div.innerHTML = `
+                    <img src="${imgUrl}" alt="${description}" style="${description === 'Logo' ? 'background: #f0f0f0; padding: 10px; border-radius: 5px;' : ''}">
+                    <button class="download-btn" onclick="downloadImage('${imgUrl}', '${description}')">Download ${description}</button>
+                `;
+                gallery.appendChild(div);
+            });
+        }
 
-        async function downloadAllImagesAsZip(images) {
+        async function downloadAllAsZip() {
             const zip = new JSZip();
-            const imgFolder = zip.folder("images");
-
-            for (const image of images) {
-                const response = await fetch(image.src);
-                const blob = await response.blob();
-                imgFolder.file(`${image.name}.jpg`, blob);
+            const gallery = document.getElementById('gallery');
+            const images = gallery.getElementsByTagName('img');
+            
+            if (images.length === 0) {
+                alert('No images to download');
+                return;
             }
-
-            zip.generateAsync({ type: "blob" }).then(content => {
-                const link = document.createElement('a');
-                link.href = URL.createObjectURL(content);
-                link.download = "images.zip";
-                link.click();
+            
+            const fetchPromises = Array.from(images).map(async (img, index) => {
+                const response = await fetch(img.src);
+                const blob = await response.blob();
+                const fileName = img.alt.replace(/[^a-zA-Z0-9]/g, '_') || `image_${index}`;
+                zip.file(`${fileName}.jpg`, blob);
+            });
+            
+            await Promise.all(fetchPromises);
+            
+            zip.generateAsync({ type: 'blob' }).then((content) => {
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(content);
+                a.download = 'artworks.zip';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
             });
         }
     </script>
