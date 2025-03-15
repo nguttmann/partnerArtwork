@@ -1,171 +1,773 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Artwork Download App</title>
+    <title>Artwork Generation Service</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <style>
-        body {
-            font-family: 'Arial', sans-serif;
+        :root {
+            --primary: #6366f1;
+            --primary-hover: #4f46e5;
+            --success: #22c55e;
+            --success-hover: #16a34a;
+            --background: #f8fafc;
+            --surface: #ffffff;
+            --border: #e2e8f0;
+            --text: #1e293b;
+            --radius: 12px;
+        }
+
+        body { 
+            font-family: 'Inter', sans-serif; 
+            max-width: 1200px; 
+            margin: 0 auto;
+            padding: 2rem;
+            background: var(--background);
+            color: var(--text);
+            line-height: 1.5;
+        }
+
+        .header {
             text-align: center;
-            background-color: #f4f4f4;
-            padding: 20px;
+            margin-bottom: 2.5rem;
         }
-        .container {
-            max-width: 800px;
-            margin: auto;
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+
+        .header h1 {
+            font-weight: 600;
+            font-size: 2rem;
+            margin: 0 0 0.5rem;
+            color: var(--text);
         }
-        .form-container {
+
+        .card {
+            background: var(--surface);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            border: 1px solid var(--border);
+            margin-bottom: 1.5rem;
+        }
+
+        select, input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            background: var(--surface);
+            font-size: 0.9rem;
+            transition: border-color 0.2s;
+        }
+
+        select {
+            appearance: none;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%3E%3Cpath%20fill%3D%22%236366f1%22%20d%3D%22M7%2010l5%205%205-5z%22%2F%3E%3C%2Fsvg%3E");
+            background-repeat: no-repeat;
+            background-position: right 0.75rem center;
+            background-size: 1.25rem;
+        }
+
+        select:focus, input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+
+        .form-group {
             display: flex;
             flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .dimension-fields {
+            display: none;
+            flex-direction: column;
+            gap: 1rem;
+            width: 100%;
+            max-width: 300px;
+        }
+
+        .dimension-fields.visible {
+            display: flex;
+        }
+
+        .btn {
+            display: inline-flex;
             align-items: center;
-            margin-bottom: 20px;
-        }
-        input, button {
-            padding: 10px;
-            margin: 5px;
-            border-radius: 5px;
-            border: 1px solid #ccc;
-            font-size: 16px;
-        }
-        button {
-            cursor: pointer;
-            background: #007bff;
-            color: white;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
             border: none;
-            transition: 0.3s;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
         }
-        button:hover {
-            background: #0056b3;
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
         }
+
+        .btn-primary:hover {
+            background: var(--primary-hover);
+            transform: translateY(-1px);
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: var(--success-hover);
+        }
+
         .gallery {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            justify-items: center;
+            gap: 1.5rem;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            margin-top: 2rem;
         }
-        .artwork {
-            background: white;
-            padding: 10px;
-            border-radius: 10px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+
+        .asset-card {
+            background: var(--surface);
+            border-radius: var(--radius);
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            transition: transform 0.2s;
         }
-        .artwork img {
+
+        .asset-card:hover {
+            transform: translateY(-2px);
+        }
+
+        .asset-preview {
+            padding: 1rem;
+            background: #f8fafc;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .asset-preview img {
             width: 100%;
-            border-radius: 5px;
+            height: 200px;
+            object-fit: contain;
+            background: 
+                linear-gradient(45deg, #e2e8f0 25%, transparent 25%),
+                linear-gradient(-45deg, #e2e8f0 25%, transparent 25%),
+                linear-gradient(45deg, transparent 75%, #e2e8f0 75%),
+                linear-gradient(-45deg, transparent 75%, #e2e8f0 75%);
+            background-size: 20px 20px;
+            background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
         }
+
+        .asset-info {
+            padding: 1rem;
+        }
+
+        .asset-actions {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 1.5rem;
+            height: 1.5rem;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .hidden { display: none; }
+        .error { color: #dc2626; margin: 1rem 0; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Artwork Download App</h1>
-        <div class="form-container">
-            <input type="text" id="contentId" placeholder="Enter Content ID" style="width: 90%; max-width: 400px;">
-            <input type="number" id="imageWidth" placeholder="Width (default 1000)" style="width: 90%; max-width: 400px;">
-            <input type="number" id="imageHeight" placeholder="Height (default 500)" style="width: 90%; max-width: 400px;">
-            <button onclick="fetchArtworks()">Load Artworks</button>
+    <div class="header">
+        <h1>🎨 Artwork Generation Service</h1>
+        <p>Generate platform-specific media assets in seconds</p>
+    </div>
+
+    <div class="card">
+        <div class="select-container">
+            <label>Select Platform Template:</label>
+            <select id="partner" onchange="handlePartnerSelect()">
+                <option value="none">Custom Dimensions</option>
+                <option value="amazon">Amazon Fire</option>
+                <option value="samsung">SamsungTV+</option>
+                <option value="frequency">Frequency</option>
+                <option value="vizio">Vizio</option>
+                <option value="tvbits">TVBITS</option>
+                <option value="joyn">Joyn</option>
+                <option value="waipu">Waipu</option>
+            </select>
         </div>
-        <button onclick="downloadAllAsZip()" style="width: 90%; max-width: 400px;">Download All</button>
-        <div class="gallery" id="gallery"></div>
+    </div>
+
+    <div class="card">
+        <form onsubmit="handleSubmit(event)">
+            <div class="form-group">
+                <div class="input-group">
+                    <label for="id">📌 Content ID</label>
+                    <input type="text" id="id" required placeholder="Enter content ID">
+                </div>
+                
+                <div class="dimension-fields" id="dimensionFields">
+                    <div class="input-group">
+                        <label for="width">↔️ Width (px)</label>
+                        <input type="number" id="width" value="1920">
+                    </div>
+                    
+                    <div class="input-group">
+                        <label for="height">↕️ Height (px)</label>
+                        <input type="number" id="height" value="1080">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="asset-actions">
+                <button class="btn btn-primary" type="submit" id="submitButton">
+                    <span class="material-icons">bolt</span>
+                    Generate Artwork
+                </button>
+                <button class="btn btn-success" type="button" onclick="handleDownloadAllTemplates()" id="downloadAllButton">
+                    <span class="material-icons">download</span>
+                    Download All Templates
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <div id="results" class="card">
+        <div class="gallery"></div>
     </div>
 
     <script>
-        async function fetchArtworks() {
-            const apiKey = 'NuCtpyyx9WvTbZDI2lHygtZggxnX77Fg';
-            const contentId = document.getElementById('contentId').value;
-            const width = document.getElementById('imageWidth').value || 1000;
-            const height = document.getElementById('imageHeight').value || 500;
-            
-            if (!contentId) {
-                alert('Please enter a Content ID');
-                return;
+        const API_KEY = 'NuCtpyyx9WvTbZDI2lHygtZggxnX77Fg';
+        let currentAssets = [];
+        const PARTNER_TEMPLATES = {
+            amazon: { requirements: [{ width: 1920, height: 1080, label: "16_9 no text" }] },
+            samsung: { 
+                requirements: [
+                    { width: 1920, height: 1080, label: "Feature Thumbnail - Landscape" },
+                    { width: 2000, height: 3000, label: "Feature Thumbnail - Portrait" }
+                ]
+            },
+            frequency: { requirements: [{ width: 1920, height: 1080, label: "16_9 Artwork" }] },
+            vizio: { 
+                requirements: [
+                    { width: 1920, height: 1080, label: "Landscape" },
+                    { width: 960, height: 1440, label: "Portrait" }
+                ]
+            },
+            tvbits: { requirements: [{ width: 1920, height: 1080, label: "16_9 Artwork" }] },
+            joyn: {
+                requirements: [
+                    { width: 1920, height: 1080, label: "16_9 Hero Landscape no logo" },
+                    { width: 860, height: 646, label: "4_3 Primary no logo" },
+                    { width: 750, height: 1040, label: "3_2 Hero Portrait no logo" }
+                ]
+            },
+            waipu: {
+                requirements: [
+                    { width: 1920, height: 1080, label: "16_9 Thumbnail" },
+                    { width: 2000, height: 3000, label: "2_3 Film Cover" }
+                ]
             }
-            
-            const apiUrl = `https://api.redbull.com/v1/graphql/rrn:gql-queries:c042e604-6177-5500-9ff4-71f10851876f?id=${contentId}&imageWidth=${width}&imageHeight=${height}`;
-            
-            const response = await fetch(apiUrl, {
-                method: 'GET',
-                headers: { 'API-Key': apiKey }
-            });
-            
-            const data = await response.json();
-            const gallery = document.getElementById('gallery');
-            gallery.innerHTML = '';
-            
-            const resource = data.data?.resource;
-            if (!resource) {
-                alert('No images found for this content ID');
-                return;
-            }
-            
-            const images = [
-                ...resource.logo?.map(img => img.imageEssence.imageURL.replace('{op}/', '')) || [],
-                resource.aspect9x16,
-                resource.aspect16x9,
-                resource.aspect2x3,
-                resource.headerMedia?.imageSrc,
-                ...resource.featuredMedia?.map(img => img.imageSrc) || []
-            ].filter(Boolean);
-            
-            images.forEach((imgUrl, index) => {
-                let description = 'Artwork';
-                if (index < (resource.logo?.length || 0)) {
-                    description = 'Logo';
-                } else if (imgUrl === resource.aspect9x16) {
-                    description = 'Artwork (9x16)';
-                } else if (imgUrl === resource.aspect16x9) {
-                    description = 'Artwork (16x9)';
-                } else if (imgUrl === resource.aspect2x3) {
-                    description = 'Artwork (2x3)';
-                } else if (imgUrl === resource.headerMedia?.imageSrc) {
-                    description = 'Header Media';
-                } else if (resource.featuredMedia?.some(img => img.imageSrc === imgUrl)) {
-                    description = 'Featured Media';
-                }
-                
-                const div = document.createElement('div');
-                div.classList.add('artwork');
-                div.innerHTML = `
-                    <img src="${imgUrl}" alt="${description}" style="${description === 'Logo' ? 'background: #f0f0f0; padding: 10px; border-radius: 5px;' : ''}">
-                    <button class="download-btn" onclick="downloadImage('${imgUrl}', '${description}')">Download ${description}</button>
-                `;
-                gallery.appendChild(div);
-            });
+        };
+
+        function sanitizeFilename(str) {
+            return str.replace(/\//g, '_')
+                     .replace(/:/g, '_')
+                     .replace(/[^a-zA-Z0-9]/g, '_');
         }
 
-        async function downloadAllAsZip() {
-            const zip = new JSZip();
-            const gallery = document.getElementById('gallery');
-            const images = gallery.getElementsByTagName('img');
+        function toggleDimensionFields() {
+            const partner = document.getElementById('partner').value;
+            const dimensionFields = document.getElementById('dimensionFields');
+            const widthInput = document.getElementById('width');
+            const heightInput = document.getElementById('height');
+
+            if (partner === 'none') {
+                dimensionFields.classList.add('visible');
+                widthInput.required = true;
+                heightInput.required = true;
+            } else {
+                dimensionFields.classList.remove('visible');
+                widthInput.required = false;
+                heightInput.required = false;
+            }
+        }
+
+        function handlePartnerSelect() {
+            toggleDimensionFields();
+        }
+
+        async function handleSubmit(event) {
+            event.preventDefault();
+            const btn = document.getElementById('submitButton');
+            const resultsDiv = document.getElementById('results');
+            const originalHTML = btn.innerHTML;
             
-            if (images.length === 0) {
-                alert('No images to download');
+            try {
+                resultsDiv.querySelector('.gallery').innerHTML = '';
+                resultsDiv.querySelectorAll('.download-btn').forEach(btn => btn.remove());
+                resultsDiv.querySelectorAll('.error').forEach(el => el.remove());
+                currentAssets = [];
+
+                btn.innerHTML = `<span class="loading"></span> Generating...`;
+                btn.disabled = true;
+                
+                const partner = document.getElementById('partner').value;
+                if (partner !== 'none') {
+                    await handlePartnerTemplate(partner);
+                } else {
+                    await handleStandardRequest();
+                }
+            } catch (error) {
+                showError(error);
+            } finally {
+                btn.innerHTML = originalHTML;
+                btn.disabled = false;
+            }
+        }
+
+        async function handleStandardRequest() {
+            const contentId = encodeURIComponent(document.getElementById('id').value);
+            const width = document.getElementById('width').value;
+            const height = document.getElementById('height').value;
+
+            try {
+                const url = `https://api.redbull.com/v1/graphql/rrn:gql-queries:1058af4d-375c-5f0f-a7a3-b5820e9109ad?id=${contentId}&imageWidth=${width}&imageHeight=${height}`;
+                const response = await fetch(url, { headers: { 'API-Key': API_KEY } });
+                
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                const data = await response.json();
+                displayStandardResults(data);
+            } catch (error) {
+                throw new Error(`Failed to generate artwork: ${error.message}`);
+            }
+        }
+
+        function processImageEntries(resource) {
+            const imageEntries = [];
+            if (Array.isArray(resource.logo)) {
+                resource.logo.forEach((logo, index) => {
+                    if (logo?.imageEssence?.imageURL) {
+                        const url = logo.imageEssence.imageURL.replace(/\{op\}\/?/g, '');
+                        imageEntries.push({
+                            label: `Logo ${index + 1}`,
+                            url: url,
+                            type: 'logo'
+                        });
+                    }
+                });
+            }
+
+            const aspects = {
+                aspect9x16: '9_16',
+                aspect16x9: '16_9',
+                aspect2x3: '2_3'
+            };
+            Object.entries(aspects).forEach(([key, label]) => {
+                if (resource[key]) imageEntries.push({ 
+                    label: `${label} Aspect`,
+                    url: resource[key],
+                    type: 'aspect'
+                });
+            });
+
+            if (resource.headerMedia?.imageSrc) {
+                imageEntries.push({
+                    label: 'Header Media',
+                    url: resource.headerMedia.imageSrc,
+                    type: 'header'
+                });
+            }
+
+            if (Array.isArray(resource.featuredMedia)) {
+                resource.featuredMedia.forEach((media, index) => {
+                    if (media?.imageSrc) {
+                        imageEntries.push({
+                            label: `Featured Media ${index + 1}`,
+                            url: media.imageSrc,
+                            type: 'featured'
+                        });
+                    }
+                });
+            }
+
+            return imageEntries;
+        }
+
+        function displayStandardResults(data) {
+            const gallery = document.querySelector('.gallery');
+            gallery.innerHTML = '';
+            currentAssets = [];
+
+            if (!data?.data?.resource) {
+                gallery.innerHTML = '<div class="card">No images found</div>';
                 return;
             }
-            
-            const fetchPromises = Array.from(images).map(async (img, index) => {
-                const response = await fetch(img.src);
-                const blob = await response.blob();
-                const fileName = img.alt.replace(/[^a-zA-Z0-9]/g, '_') || `image_${index}`;
-                zip.file(`${fileName}.jpg`, blob);
+
+            const imageEntries = processImageEntries(data.data.resource);
+            if (imageEntries.length === 0) {
+                gallery.innerHTML = '<div class="card">No valid images found</div>';
+                return;
+            }
+
+            imageEntries.forEach(entry => {
+                const asset = {
+                    label: entry.label,
+                    url: entry.url,
+                    filename: generateFilename(entry)
+                };
+                currentAssets.push(asset);
+                gallery.appendChild(createAssetCard(asset));
             });
-            
-            await Promise.all(fetchPromises);
-            
-            zip.generateAsync({ type: 'blob' }).then((content) => {
-                const a = document.createElement('a');
-                a.href = URL.createObjectURL(content);
-                a.download = 'artworks.zip';
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-            });
+
+            const downloadAllBtn = document.createElement('button');
+            downloadAllBtn.className = 'btn btn-success download-btn';
+            downloadAllBtn.innerHTML = `<span class="material-icons">download_for_offline</span> Download All`;
+            downloadAllBtn.onclick = () => downloadAllAsZip(currentAssets);
+            document.getElementById('results').appendChild(downloadAllBtn);
         }
+
+        function createAssetCard(asset) {
+            const card = document.createElement('div');
+            card.className = 'asset-card';
+            card.innerHTML = `
+                <div class="asset-preview">
+                    <img src="${asset.url}" alt="${asset.label}" loading="lazy">
+                </div>
+                <div class="asset-info">
+                    <h4>${asset.label}</h4>
+                    <div class="asset-actions">
+                        <button class="btn btn-primary" onclick="downloadImage('${asset.url}', '${asset.filename}')">
+                            <span class="material-icons">download</span>
+                            Download
+                        </button>
+                    </div>
+                </div>
+            `;
+            return card;
+        }
+
+        async function handlePartnerTemplate(partner) {
+            const contentId = encodeURIComponent(document.getElementById('id').value);
+            const gallery = document.querySelector('.gallery');
+            gallery.innerHTML = `<div class="card">Generating ${getPartnerName(partner)} Template...</div>`;
+
+            try {
+                const requests = PARTNER_TEMPLATES[partner].requirements.map(req => 
+                    fetchTemplateImage(contentId, req.width, req.height)
+                );
+                
+                const responses = await Promise.all(requests);
+                const assets = responses.map(res => res.data?.resource);
+                
+                const templateAssets = processPartnerAssets(partner, assets);
+                displayTemplateResults(templateAssets, contentId, partner);
+            } catch (error) {
+                throw new Error(`Failed to generate template: ${error.message}`);
+            }
+        }
+
+        function processPartnerAssets(partner, assets) {
+            let templateAssets = {};
+            switch(partner) {
+                case 'amazon':
+                    templateAssets.main = getStandardMedia(assets[0]);
+                    break;
+                case 'samsung':
+                    templateAssets.landscape = assets[0]?.aspect16x9 || getStandardMedia(assets[0]);
+                    templateAssets.portrait = assets[1]?.aspect2x3 || getStandardMedia(assets[1]);
+                    break;
+                case 'frequency':
+                    templateAssets.main = assets[0]?.aspect16x9 || getStandardMedia(assets[0]);
+                    break;
+                case 'vizio':
+                    templateAssets.landscape = assets[0]?.aspect16x9 || getStandardMedia(assets[0]);
+                    templateAssets.portrait = assets[1]?.aspect9x16 || getStandardMedia(assets[1]);
+                    break;
+                case 'tvbits':
+                    templateAssets.main = assets[0]?.aspect16x9 || getStandardMedia(assets[0]);
+                    break;
+                case 'joyn':
+                    templateAssets.landscape = getStandardMedia(assets[0]);
+                    templateAssets.primary = getStandardMedia(assets[1]);
+                    templateAssets.portrait = getStandardMedia(assets[2]);
+                    const logoEntry = processImageEntries(assets[0]).find(e => e.type === 'logo');
+                    if (logoEntry) {
+                        templateAssets.logo = {
+                            url: logoEntry.url,
+                            filename: generateFilename(logoEntry)
+                        };
+                    }
+                    break;
+                case 'waipu':
+                    templateAssets.thumbnail = getStandardMedia(assets[0]);
+                    templateAssets.filmCover = getWaipuFilmCover(assets[1]);
+                    break;
+            }
+            return templateAssets;
+        }
+
+        function getStandardMedia(resource) {
+            return resource?.headerMedia?.imageSrc || resource?.featuredMedia?.[0]?.imageSrc;
+        }
+
+        function getWaipuFilmCover(resource) {
+            return resource?.aspect2x3 || getStandardMedia(resource);
+        }
+
+        async function fetchTemplateImage(contentId, width, height) {
+            const url = `https://api.redbull.com/v1/graphql/rrn:gql-queries:1058af4d-375c-5f0f-a7a3-b5820e9109ad?id=${contentId}&imageWidth=${width}&imageHeight=${height}`;
+            const response = await fetch(url, { headers: { 'API-Key': API_KEY } });
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            return response.json();
+        }
+
+        function displayTemplateResults(assets, contentId, partner) {
+            const gallery = document.querySelector('.gallery');
+            gallery.innerHTML = '';
+            
+            const files = createTemplateFiles(assets, contentId, partner);
+            Object.entries(files).forEach(([key, file]) => {
+                if (file.url) {
+                    const asset = {
+                        label: file.displayName,
+                        url: file.url,
+                        filename: file.name
+                    };
+                    gallery.appendChild(createAssetCard(asset));
+                }
+            });
+
+            const zipBtn = document.createElement('button');
+            zipBtn.className = 'btn btn-success download-btn';
+            zipBtn.innerHTML = `<span class="material-icons">download_for_offline</span> Download Complete Package`;
+            zipBtn.onclick = () => createTemplateZip(files, contentId, partner);
+            document.getElementById('results').appendChild(zipBtn);
+        }
+
+        function createTemplateFiles(assets, contentId, partner) {
+            const partnerName = sanitizeFilename(getPartnerName(partner));
+            const templateMap = {
+                amazon: { main: ['16_9', assets.main] },
+                samsung: { 
+                    landscape: ['Landscape', assets.landscape],
+                    portrait: ['Portrait', assets.portrait]
+                },
+                frequency: { main: ['16_9', assets.main] },
+                vizio: { 
+                    landscape: ['Landscape', assets.landscape],
+                    portrait: ['Portrait', assets.portrait]
+                },
+                tvbits: { main: ['16_9', assets.main] },
+                joyn: {
+                    landscape: ['16x9_Hero_Landscape', assets.landscape],
+                    primary: ['4x3_Primary', assets.primary],
+                    portrait: ['3x2_Hero_Portrait', assets.portrait],
+                    ...(assets.logo ? { logo: ['Logo', assets.logo.url, assets.logo.filename] } : {})
+                },
+                waipu: {
+                    thumbnail: ['16x9_Thumbnail', assets.thumbnail],
+                    filmCover: ['2x3_Film_Cover', assets.filmCover]
+                }
+            };
+
+            return Object.entries(templateMap[partner]).reduce((acc, [key, [label, url, customFilename]]) => {
+                if (url) {
+                    const sanitizedLabel = sanitizeFilename(label);
+                    const ext = customFilename ? customFilename.split('.').pop() : getFileExtension(url);
+                    acc[key] = {
+                        name: customFilename || `${partnerName}_${sanitizedLabel}_${contentId}.${ext}`,
+                        displayName: `${getPartnerName(partner)} ${label}`,
+                        url: url,
+                        label: label
+                    };
+                }
+                return acc;
+            }, {});
+        }
+
+        async function handleDownloadAllTemplates() {
+            const btn = document.getElementById('downloadAllButton');
+            const originalHTML = btn.innerHTML;
+            
+            try {
+                btn.innerHTML = `<span class="loading"></span> Preparing all templates...`;
+                btn.disabled = true;
+                
+                const contentId = encodeURIComponent(document.getElementById('id').value);
+                const partners = Object.keys(PARTNER_TEMPLATES).filter(p => p !== 'none');
+                
+                const zip = new JSZip();
+                const rootFolder = zip.folder(`All_Templates_${new Date().toISOString().slice(0,10)}`);
+                rootFolder.file('README.txt', `All Template Assets\nContent ID: ${contentId}\nGenerated: ${new Date().toISOString()}`);
+                
+                for (const partner of partners) {
+                    try {
+                        const requests = PARTNER_TEMPLATES[partner].requirements.map(req => 
+                            fetchTemplateImage(contentId, req.width, req.height)
+                        );
+                        const responses = await Promise.all(requests);
+                        const assets = responses.map(res => res.data?.resource);
+                        const templateAssets = processPartnerAssets(partner, assets);
+                        const files = createTemplateFiles(templateAssets, contentId, partner);
+                        
+                        const partnerFolder = rootFolder.folder(sanitizeFilename(getPartnerName(partner)));
+                        for (const file of Object.values(files)) {
+                            if (file.url) {
+                                const response = await fetch(file.url);
+                                const blob = await response.blob();
+                                partnerFolder.file(file.name, blob);
+                            }
+                        }
+                    } catch (error) {
+                        console.error(`Failed to process ${partner}:`, error);
+                        rootFolder.file(`${sanitizeFilename(getPartnerName(partner))}_ERROR.txt`, 
+                            `Failed to generate template: ${error.message}`);
+                    }
+                }
+
+                const content = await zip.generateAsync({ type: "blob" });
+                saveAs(content, `all_templates_${contentId}.zip`);
+                
+            } catch (error) {
+                showError(error);
+            } finally {
+                btn.innerHTML = originalHTML;
+                btn.disabled = false;
+            }
+        }
+
+        function getFileExtension(url) {
+            if (url.includes('f_png')) return 'png';
+            if (url.includes('f_jpg')) return 'jpg';
+            return 'jpg';
+        }
+
+        // ONLY MODIFIED FUNCTION - logos now get .png
+        function generateFilename(entry) {
+            const ext = entry.type === 'logo' ? 'png' : getFileExtension(entry.url);
+            let base = sanitizeFilename(entry.label);
+            let counter = 1;
+            let filename = `${base}.${ext}`;
+            
+            while (currentAssets.some(img => img.filename === filename)) {
+                filename = `${base}_${counter}.${ext}`;
+                counter++;
+            }
+            return filename;
+        }
+
+        async function createTemplateZip(files, contentId, partner) {
+            const btn = document.querySelector('.download-btn');
+            const originalHTML = btn.innerHTML;
+            
+            try {
+                btn.innerHTML = `<span class="loading"></span> Packaging...`;
+                btn.disabled = true;
+
+                const zip = new JSZip();
+                const folder = zip.folder(`${sanitizeFilename(getPartnerName(partner))}_${contentId}`);
+                folder.file('README.txt', `${getPartnerName(partner)} Package\nContent ID: ${contentId}\nGenerated: ${new Date().toISOString()}`);
+
+                for (const file of Object.values(files)) {
+                    if (file.url) {
+                        try {
+                            const response = await fetch(file.url);
+                            const blob = await response.blob();
+                            folder.file(file.name, blob);
+                        } catch (error) {
+                            console.error(`Skipping ${file.name}: ${error.message}`);
+                        }
+                    }
+                }
+
+                const content = await zip.generateAsync({ type: "blob" });
+                saveAs(content, `${sanitizeFilename(getPartnerName(partner))}_${contentId}.zip`);
+            } catch (error) {
+                showError(error);
+            } finally {
+                btn.innerHTML = originalHTML;
+                btn.disabled = false;
+            }
+        }
+
+        async function downloadAllAsZip(assets) {
+            const btn = document.querySelector('.download-btn');
+            const originalHTML = btn.innerHTML;
+            
+            try {
+                btn.innerHTML = `<span class="loading"></span> Packaging...`;
+                btn.disabled = true;
+
+                const zip = new JSZip();
+                const folder = zip.folder(`Artwork_${Date.now()}`);
+                
+                for (const asset of assets) {
+                    const response = await fetch(asset.url);
+                    const blob = await response.blob();
+                    folder.file(asset.filename, blob);
+                }
+
+                const content = await zip.generateAsync({ type: "blob" });
+                saveAs(content, `artwork-pack-${Date.now()}.zip`);
+            } catch (error) {
+                showError(error);
+            } finally {
+                btn.innerHTML = originalHTML;
+                btn.disabled = false;
+            }
+        }
+
+        function getPartnerName(partner) {
+            return {
+                amazon: 'Amazon_Fire',
+                samsung: 'SamsungTV+',
+                frequency: 'Frequency',
+                vizio: 'Vizio',
+                tvbits: 'TVBITS',
+                joyn: 'Joyn',
+                waipu: 'Waipu'
+            }[partner];
+        }
+
+        function downloadImage(url, filename) {
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function showError(error) {
+            const errorEl = document.createElement('div');
+            errorEl.className = 'card error';
+            errorEl.textContent = `Error: ${error.message}`;
+            document.getElementById('results').prepend(errorEl);
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            toggleDimensionFields();
+        });
     </script>
 </body>
 </html>
