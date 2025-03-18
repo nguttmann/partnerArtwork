@@ -256,7 +256,9 @@
     </div>
 
     <script>
+        // Your public API key
         const API_KEY = 'NuCtpyyx9WvTbZDI2lHygtZggxnX77Fg';
+
         let currentAssets = [];
         const PARTNER_TEMPLATES = {
             amazon: { requirements: [{ width: 1920, height: 1080, label: "16_9 no text" }] },
@@ -323,6 +325,7 @@
             const originalHTML = btn.innerHTML;
             
             try {
+                // Clear out previous results and errors
                 resultsDiv.querySelector('.gallery').innerHTML = '';
                 resultsDiv.querySelectorAll('.download-btn').forEach(btn => btn.remove());
                 resultsDiv.querySelectorAll('.error').forEach(el => el.remove());
@@ -351,7 +354,7 @@
             const height = document.getElementById('height').value;
 
             try {
-                const url = `https://api.redbull.com/v1/graphql/rrn:gql-queries:1058af4d-375c-5f0f-a7a3-b5820e9109ad?id=${contentId}&imageWidth=${width}&imageHeight=${height}`;
+                const url = `https://api.redbull.com/v1/graphql/rrn:gql-queries:4948293e-8f72-5066-ad4a-f00a53919282?id=${contentId}&imageWidth=${width}&imageHeight=${height}`;
                 const response = await fetch(url, { headers: { 'API-Key': API_KEY } });
                 
                 if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
@@ -362,10 +365,14 @@
             }
         }
 
+        // UPDATED processImageEntries to handle logos in multiple places
         function processImageEntries(resource) {
             const imageEntries = [];
-            if (Array.isArray(resource.logo)) {
-                resource.logo.forEach((logo, index) => {
+
+            // Helper to collect logos from an array
+            function collectLogos(logoArray) {
+                if (!Array.isArray(logoArray)) return;
+                logoArray.forEach((logo, index) => {
                     if (logo?.imageEssence?.imageURL) {
                         const url = logo.imageEssence.imageURL.replace(/\{op\}\/?/g, '');
                         imageEntries.push({
@@ -377,19 +384,47 @@
                 });
             }
 
-            const aspects = {
-                aspect9x16: '9_16',
-                aspect16x9: '16_9',
-                aspect2x3: '2_3'
-            };
-            Object.entries(aspects).forEach(([key, label]) => {
-                if (resource[key]) imageEntries.push({ 
-                    label: `${label} Aspect`,
-                    url: resource[key],
+            // 1) Top-level resource.logo
+            collectLogos(resource.logo);
+
+            // 2) resource.events[i].logo
+            if (Array.isArray(resource.events)) {
+                resource.events.forEach(evt => {
+                    collectLogos(evt.logo);
+                });
+            }
+
+            // 3) resource.extraFor[i].logo
+            if (Array.isArray(resource.extraFor)) {
+                resource.extraFor.forEach(item => {
+                    collectLogos(item.logo);
+                });
+            }
+
+            // aspect images
+            if (resource.aspect9x16) {
+                imageEntries.push({
+                    label: '9_16 Aspect',
+                    url: resource.aspect9x16,
                     type: 'aspect'
                 });
-            });
+            }
+            if (resource.aspect16x9) {
+                imageEntries.push({
+                    label: '16_9 Aspect',
+                    url: resource.aspect16x9,
+                    type: 'aspect'
+                });
+            }
+            if (resource.aspect2x3) {
+                imageEntries.push({
+                    label: '2_3 Aspect',
+                    url: resource.aspect2x3,
+                    type: 'aspect'
+                });
+            }
 
+            // headerMedia
             if (resource.headerMedia?.imageSrc) {
                 imageEntries.push({
                     label: 'Header Media',
@@ -398,6 +433,7 @@
                 });
             }
 
+            // featuredMedia
             if (Array.isArray(resource.featuredMedia)) {
                 resource.featuredMedia.forEach((media, index) => {
                     if (media?.imageSrc) {
@@ -535,7 +571,7 @@
         }
 
         async function fetchTemplateImage(contentId, width, height) {
-            const url = `https://api.redbull.com/v1/graphql/rrn:gql-queries:1058af4d-375c-5f0f-a7a3-b5820e9109ad?id=${contentId}&imageWidth=${width}&imageHeight=${height}`;
+            const url = `https://api.redbull.com/v1/graphql/rrn:gql-queries:4948293e-8f72-5066-ad4a-f00a53919282?id=${contentId}&imageWidth=${width}&imageHeight=${height}`;
             const response = await fetch(url, { headers: { 'API-Key': API_KEY } });
             if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
             return response.json();
@@ -662,7 +698,7 @@
             return 'jpg';
         }
 
-        // ONLY MODIFIED FUNCTION - logos now get .png
+        // Generate filename (logos get .png, everything else tries to read from the URL)
         function generateFilename(entry) {
             const ext = entry.type === 'logo' ? 'png' : getFileExtension(entry.url);
             let base = sanitizeFilename(entry.label);
